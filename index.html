@@ -2,39 +2,52 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Dự toán Chi phí Sân chơi</title>
+    <title>Mô phỏng Toán học Sân chơi</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 20px; background-color: #f4f7f6; color: #333; }
-        .container { background: white; max-width: 750px; margin: auto; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .control-group { display: flex; flex-wrap: wrap; justify-content: space-around; margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #eee; }
-        .control-item { margin: 10px; flex: 1; min-width: 250px; }
+        .container { background: white; max-width: 850px; margin: auto; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .control-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #eee; }
+        .control-item { padding: 10px; background: #fafafa; border-radius: 8px; }
         input[type=range] { width: 100%; cursor: pointer; }
-        input[type=number] { width: 120px; padding: 5px; border-radius: 5px; border: 1px solid #ccc; font-size: 1em; }
-        .result-box { background: #fff8f0; padding: 15px; border-radius: 10px; border-left: 5px solid #A0522D; margin: 20px 0; }
+        input[type=number] { width: 90%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 1em; text-align: center; }
+        .result-box { background: #fff8f0; padding: 15px; border-radius: 10px; border-left: 5px solid #A0522D; margin: 20px 0; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; }
+        .equation-box { background: #e3f2fd; padding: 15px; border-radius: 10px; border-left: 5px solid #2196f3; margin: 10px 0; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
         .highlight-area { color: #A0522D; font-size: 1.2em; font-weight: bold; }
-        .highlight-money { color: #2e7d32; font-size: 1.5em; font-weight: bold; }
-        #plot { width: 100%; height: 500px; }
+        .highlight-money { color: #2e7d32; font-size: 1.3em; font-weight: bold; }
+        #plot { width: 100%; height: 550px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Dự toán Chi phí Lát gạch Sân chơi</h2>
+        <h2>Thiết kế & Dự toán Chi phí Sân chơi</h2>
         
         <div class="control-group">
             <div class="control-item">
-                <label><b>Độ võng Parabol (h): </b><span id="h_val">20</span> m</label><br>
-                <input type="range" id="h_slider" min="0" max="40" step="0.5" value="20">
+                <label><b>Chiều rộng (W):</b> (m)</label>
+                <input type="number" id="w_input" value="60" min="10" max="200">
             </div>
             <div class="control-item">
-                <label><b>Giá gạch (VNĐ/m²): </b></label><br>
-                <input type="number" id="price_input" value="35000" step="1000" min="0">
+                <label><b>Chiều dài (L):</b> (m)</label>
+                <input type="number" id="l_input" value="80" min="10" max="200">
             </div>
+            <div class="control-item">
+                <label><b>Giá gạch:</b> (VNĐ/m²)</label>
+                <input type="number" id="price_input" value="35000" step="1000">
+            </div>
+            <div class="control-item" style="grid-column: span 2;">
+                <label><b>Độ võng Parabol (h): </b><span id="h_val">20</span> m</label>
+                <input type="range" id="h_slider" min="0" max="40" step="0.1" value="20">
+            </div>
+        </div>
+
+        <div class="equation-box">
+            Phương trình Parabol biên trên: <span id="eq_text" style="color: #d32f2f;">y = ax² + b</span>
         </div>
         
         <div class="result-box">
-            <p>Diện tích sân chơi: <span id="area_val" class="highlight-area">3200</span> m²</p>
-            <p>Tổng chi phí hoàn thành: <span id="total_cost" class="highlight-money">112,000,000</span> VNĐ</p>
+            <div>Diện tích sân: <span id="area_val" class="highlight-area">0</span> m²</div>
+            <div>Tổng chi phí: <span id="total_cost" class="highlight-money">0</span> VNĐ</div>
         </div>
         
         <div id="plot"></div>
@@ -46,65 +59,86 @@
         }
 
         function updateAll() {
-            const h = parseFloat(document.getElementById('h_slider').value);
+            // Lấy giá trị đầu vào
+            const W = parseFloat(document.getElementById('w_input').value) || 0;
+            const L = parseFloat(document.getElementById('l_input').value) || 0;
             const price = parseFloat(document.getElementById('price_input').value) || 0;
+            
+            // Giới hạn h không vượt quá nửa chiều dài L
+            const maxH = L / 2;
+            const slider = document.getElementById('h_slider');
+            slider.max = maxH;
+            let h = parseFloat(slider.value);
+            if (h > maxH) h = maxH;
             
             document.getElementById('h_val').innerText = h;
             
-            // 1. Tính diện tích: S = S_hcn - 2 * (2/3 * rộng * h) = 4800 - 80h
-            const area = 4800 - (80 * h);
+            // 1. Tính diện tích
+            // S = (W * L) - 2 * (2/3 * W * h)
+            const area = (W * L) - ( (4/3) * W * h );
             document.getElementById('area_val').innerText = Math.round(area);
 
             // 2. Tính chi phí
             const cost = area * price;
             document.getElementById('total_cost').innerText = formatCurrency(Math.round(cost));
 
-            // 3. Vẽ đồ thị
+            // 3. Tính hệ số phương trình Parabol: y = ax^2 + b
+            // Tại x = W/2, y = L/2. Tại x = 0, y = L/2 - h
+            // b = L/2 - h
+            // a = h / (W/2)^2 = 4h / W^2
+            const a = h / Math.pow(W/2, 2);
+            const b = (L/2) - h;
+            const a_fixed = a.toFixed(5);
+            const b_fixed = b.toFixed(2);
+            document.getElementById('eq_text').innerText = `y = ${a_fixed}x² + ${b_fixed}`;
+
+            // 4. Vẽ đồ thị
             let x_vals = [], y_top = [], y_bottom = [];
-            for (let x = -30; x <= 30; x += 0.5) {
+            const step = W / 100; 
+            for (let x = -W/2; x <= W/2; x += step) {
                 x_vals.push(x);
-                let y_p = (h / 900) * (x * x) + (40 - h);
+                let y_p = a * (x * x) + b;
                 y_top.push(y_p);
                 y_bottom.push(-y_p);
             }
 
-            const x_polygon = x_vals.concat(x_vals.slice().reverse());
-            const y_polygon = y_top.concat(y_bottom.slice().reverse());
-
             const tracePlayground = {
-                x: x_polygon,
-                y: y_polygon,
+                x: x_vals.concat(x_vals.slice().reverse()),
+                y: y_top.concat(y_bottom.slice().reverse()),
                 fill: 'toself',
                 fillcolor: '#D2B48C',
                 line: { color: '#8B4513', width: 2 },
+                name: 'Diện tích lát gạch',
                 type: 'scatter',
-                hoverinfo: 'skip'
+                hoverinfo: 'x+y'
             };
 
             const traceOutline = {
-                x: [-30, 30, 30, -30, -30],
-                y: [40, 40, -40, -40, 40],
+                x: [-W/2, W/2, W/2, -W/2, -W/2],
+                y: [L/2, L/2, -L/2, -L/2, L/2],
                 mode: 'lines',
                 line: { color: '#333', width: 2, dash: 'dash' },
-                type: 'scatter',
-                hoverinfo: 'skip'
+                name: 'Khuôn viên gốc',
+                type: 'scatter'
             };
 
             const layout = {
-                xaxis: { range: [-40, 40], title: 'Chiều rộng (m)', fixedrange: true },
-                yaxis: { range: [-50, 50], title: 'Chiều dài (m)', fixedrange: true },
+                xaxis: { range: [-W/2 - 10, W/2 + 10], title: 'Chiều rộng (x)', fixedrange: true },
+                yaxis: { range: [-L/2 - 10, L/2 + 10], title: 'Chiều dài (y)', fixedrange: true },
                 showlegend: false,
-                margin: { l: 50, r: 50, t: 20, b: 50 }
+                margin: { l: 50, r: 50, t: 20, b: 50 },
+                aspectratio: {x: 1, y: 1}
             };
 
             Plotly.react('plot', [tracePlayground, traceOutline], layout);
         }
 
-        // Lắng nghe sự kiện thay đổi
+        // Lắng nghe tất cả sự kiện
+        document.getElementById('w_input').addEventListener('input', updateAll);
+        document.getElementById('l_input').addEventListener('input', updateAll);
         document.getElementById('h_slider').addEventListener('input', updateAll);
         document.getElementById('price_input').addEventListener('input', updateAll);
         
-        // Chạy lần đầu
         window.onload = updateAll;
     </script>
 </body>
