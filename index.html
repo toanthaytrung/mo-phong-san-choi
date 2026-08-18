@@ -8,7 +8,7 @@
     <!-- Plotly.js vẽ đồ thị tương tác -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     
-    <!-- MathJax hiển thị công thức LaTeX đẹp mắt -->
+    <!-- MathJax hiển thị công thức LaTeX chuẩn trên Web -->
     <script>
         window.MathJax = {
             tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
@@ -372,17 +372,19 @@
                                         new MathRun("S=2"),
                                         new MathIntegral({
                                             subScript: [new MathRun("0")],
-                                            superScript: [new MathRun(`${halfW}`)]
-                                        }),
-                                        new MathRun(`[${halfL}-(`),
-                                        createFractionComponent(fracA),
-                                        new MathSuperScript({
-                                            children: [new MathRun("x")],
-                                            superScript: [new MathRun("2")]
-                                        }),
-                                        new MathRun(fracB.num >= 0 ? "+" : "-"),
-                                        createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den }),
-                                        new MathRun(")]dx")
+                                            superScript: [new MathRun(`${halfW}`)],
+                                            children: [
+                                                new MathRun(`[${halfL}-(`),
+                                                createFractionComponent(fracA),
+                                                new MathSuperScript({
+                                                    children: [new MathRun("x")],
+                                                    superScript: [new MathRun("2")]
+                                                }),
+                                                new MathRun(fracB.num >= 0 ? "+" : "-"),
+                                                createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den }),
+                                                new MathRun(")]dx")
+                                            ]
+                                        })
                                     ]
                                 })
                             ],
