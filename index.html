@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mô phỏng & Xuất Đề Toán Sân Chơi</title>
     
-    <!-- Plotly.js để vẽ đồ thị -->
+    <!-- Plotly.js vẽ đồ thị tương tác -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     
-    <!-- MathJax để hiển thị công thức LaTeX chuẩn trên Web -->
+    <!-- MathJax hiển thị công thức LaTeX đẹp mắt -->
     <script>
         window.MathJax = {
             tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
@@ -17,7 +17,7 @@
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
-    <!-- docx.js và FileSaver.js để xuất file Word có Equation chuẩn -->
+    <!-- docx.js và FileSaver.js xuất file Word chuẩn Equation -->
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -130,7 +130,7 @@
     </div>
 
     <div class="equation-box" id="eq_container">
-        Đang tải phương trình...
+        Đang tính toán phương trình...
     </div>
     
     <div class="result-box">
@@ -138,7 +138,7 @@
         <div>Tổng chi phí dự toán: <span id="total_cost" class="highlight-money">0</span> VNĐ</div>
     </div>
 
-    <button class="btn-export" onclick="exportWordDoc()">
+    <button class="btn-export" id="export_btn" onclick="exportWordDoc()">
         📄 Xuất File Word Đề Bài & Lời Giải (Chuẩn Equation)
     </button>
     
@@ -158,17 +158,7 @@
         return a;
     }
 
-    // Hàm chuyển số thực hoặc phân số về dạng phân số tối giản {num, den}
-    function toFraction(val) {
-        if (Number.isInteger(val)) return { num: val, den: 1 };
-        const precision = 10000;
-        let num = Math.round(val * precision);
-        let den = precision;
-        let g = gcd(num, den);
-        return { num: num / g, den: den / g };
-    }
-
-    // Chuyển phân số sang chuỗi LaTeX
+    // Chuyển phân số sang chuỗi LaTeX hiển thị trên Web
     function formatFractionLatex(f) {
         if (f.den === 1) return `${f.num}`;
         if (f.num === 0) return `0`;
@@ -199,16 +189,16 @@
         document.getElementById('total_cost').innerText = Math.round(cost).toLocaleString('vi-VN');
         
         // 2. Rút gọn hệ số a và b
-        // a = 4h / W^2 = h / (W/2)^2
+        // a = 4h / W^2
         const numA = Math.round(4 * h * 100);
         const denA = Math.round(W * W * 100);
-        const gA = gcd(numA, denA);
+        const gA = gcd(numA, denA) || 1;
         const fracA = { num: numA / gA, den: denA / gA };
 
         // b = L/2 - h = (L - 2h) / 2
         const numB = Math.round((L - 2 * h) * 10);
         const denB = 20;
-        const gB = gcd(numB, denB);
+        const gB = gcd(numB, denB) || 1;
         const fracB = { num: numB / gB, den: denB / gB };
 
         globalData = { W, L, price, h, area, cost, fracA, fracB };
@@ -230,7 +220,7 @@
         const b_val = (L / 2) - h;
 
         let x_vals = [], y_top = [], y_bottom = [];
-        const step = W / 100; 
+        const step = (W > 0) ? W / 100 : 1; 
         for (let x = -W/2; x <= W/2; x += step) {
             x_vals.push(x);
             let y_p = a_val * (x * x) + b_val;
@@ -270,176 +260,192 @@
 
     // XUẤT FILE WORD VỚI CÔNG THỨC EQUATION GỐC
     async function exportWordDoc() {
-        const { Document, Packer, Paragraph, TextRun, Math: DocxMath, MathRun, MathFraction, MathSuperScript, HeadingLevel, AlignmentType } = docx;
+        const btn = document.getElementById('export_btn');
+        btn.innerText = "⏳ Đang tạo file Word...";
+        btn.disabled = true;
 
-        const { W, L, price, h, area, cost, fracA, fracB } = globalData;
-        const halfW = W / 2;
+        try {
+            const { 
+                Document, Packer, Paragraph, TextRun, 
+                Math: DocxMath, MathRun, MathFraction, 
+                MathSuperScript, MathIntegral, 
+                HeadingLevel, AlignmentType 
+            } = docx;
 
-        // Xây dựng thành phần công thức Equation cho docx
-        function createFractionComponent(f) {
-            if (f.den === 1) return new MathRun(`${f.num}`);
-            return new MathFraction({
-                numerator: [new MathRun(`${f.num}`)],
-                denominator: [new MathRun(`${f.den}`)]
+            const { W, L, price, h, area, cost, fracA, fracB } = globalData;
+            const halfW = W / 2;
+            const halfL = L / 2;
+
+            // Xây dựng phân số dạng Equation
+            function createFractionComponent(f) {
+                if (f.den === 1) return new MathRun(`${f.num}`);
+                return new MathFraction({
+                    numerator: [new MathRun(`${Math.abs(f.num)}`)],
+                    denominator: [new MathRun(`${Math.abs(f.den)}`)]
+                });
+            }
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: [
+                        new Paragraph({
+                            text: "BÀI TOÁN ỨNG DỤNG TÍCH PHÂN THỰC TẾ",
+                            heading: HeadingLevel.HEADING_1,
+                            alignment: AlignmentType.CENTER,
+                            spacing: { after: 200 }
+                        }),
+                        new Paragraph({
+                            text: "ĐỀ BÀI: THIẾT KẾ & TÍNH CHI PHÍ SÂN CHƠI",
+                            heading: HeadingLevel.HEADING_2,
+                            spacing: { after: 120 }
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun(`Một trường học muốn lát gạch cho một sân chơi có khuôn viên hình chữ nhật với chiều rộng `),
+                                new TextRun({ text: `W = ${W} m`, bold: true }),
+                                new TextRun(` và chiều dài `),
+                                new TextRun({ text: `L = ${L} m`, bold: true }),
+                                new TextRun(`. Để tạo cảnh quan thẩm mỹ, hai cạnh chiều rộng được uốn lượn lõm vào trong theo dạng hai đường cong Parabol đối xứng nhau qua tâm sân. Độ võng lớn nhất của mỗi đường parabol vào phía trong là `),
+                                new TextRun({ text: `h = ${h} m`, bold: true }),
+                                new TextRun(`. Biết đơn giá lát gạch hoàn thiện là `),
+                                new TextRun({ text: `${price.toLocaleString('vi-VN')} VNĐ/m²`, bold: true }),
+                                new TextRun(`. Hãy tính diện tích cần lát gạch và tổng chi phí dự toán.`)
+                            ],
+                            spacing: { after: 200 }
+                        }),
+                        new Paragraph({
+                            text: "HƯỚNG DẪN GIẢI CHI TIẾT",
+                            heading: HeadingLevel.HEADING_2,
+                            spacing: { before: 200, after: 120 }
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun({ text: "Bước 1: Chọn hệ trục tọa độ Oxy", bold: true }),
+                            ]
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun(`- Chọn gốc tọa độ O tại tâm hình chữ nhật, trục Ox song song với chiều rộng, trục Oy song song với chiều dài.`),
+                            ]
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun(`- Biên trên là Parabol `),
+                                new DocxMath({
+                                    children: [
+                                        new MathRun("y="),
+                                        createFractionComponent(fracA),
+                                        new MathSuperScript({
+                                            children: [new MathRun("x")],
+                                            superScript: [new MathRun("2")]
+                                        }),
+                                        new MathRun(fracB.num >= 0 ? "+" : "-"),
+                                        createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den })
+                                    ]
+                                }),
+                                new TextRun(` với `),
+                                new DocxMath({
+                                    children: [
+                                        new MathRun(`x∈[-${halfW};${halfW}]`)
+                                    ]
+                                }),
+                                new TextRun(`.`)
+                            ],
+                            spacing: { after: 100 }
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun({ text: "Bước 2: Thiết lập tích phân tính diện tích", bold: true }),
+                            ]
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun(`Diện tích hình phẳng sân chơi được tính theo công thức:`),
+                            ]
+                        }),
+                        new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                                new DocxMath({
+                                    children: [
+                                        new MathRun("S=2"),
+                                        new MathIntegral({
+                                            subScript: [new MathRun("0")],
+                                            superScript: [new MathRun(`${halfW}`)]
+                                        }),
+                                        new MathRun(`[${halfL}-(`),
+                                        createFractionComponent(fracA),
+                                        new MathSuperScript({
+                                            children: [new MathRun("x")],
+                                            superScript: [new MathRun("2")]
+                                        }),
+                                        new MathRun(fracB.num >= 0 ? "+" : "-"),
+                                        createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den }),
+                                        new MathRun(")]dx")
+                                    ]
+                                })
+                            ],
+                            spacing: { before: 100, after: 100 }
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun(`Hoặc áp dụng công thức trừ diện tích Parabol:`),
+                            ]
+                        }),
+                        new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                                new DocxMath({
+                                    children: [
+                                        new MathRun(`S=(W⋅L)-2⋅`),
+                                        new MathFraction({
+                                            numerator: [new MathRun("2")],
+                                            denominator: [new MathRun("3")]
+                                        }),
+                                        new MathRun(`Wh=${W}⋅${L}-`),
+                                        new MathFraction({
+                                            numerator: [new MathRun("4")],
+                                            denominator: [new MathRun("3")]
+                                        }),
+                                        new MathRun(`⋅${W}⋅${h}≈${(Math.round(area * 100) / 100).toLocaleString('vi-VN')} m²`)
+                                    ]
+                                })
+                            ],
+                            spacing: { after: 100 }
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun({ text: "Bước 3: Dự toán kinh phí", bold: true }),
+                            ]
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun(`Tổng chi phí hoàn thiện = `),
+                                new TextRun({ text: `${Math.round(cost).toLocaleString('vi-VN')} VNĐ`, bold: true, color: "15803D" }),
+                                new TextRun(` (bằng chữ: `),
+                                new TextRun({ text: `Đã tính theo đơn giá ${price.toLocaleString('vi-VN')} VNĐ/m²`, italics: true }),
+                                new TextRun(`).`)
+                            ],
+                            spacing: { after: 200 }
+                        })
+                    ]
+                }]
             });
+
+            // Tạo file và tải về
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `De_Toan_San_Choi_W${W}_L${L}_h${h}.docx`);
+        } catch (err) {
+            console.error("Lỗi xuất file:", err);
+            alert("Có lỗi xảy ra khi tạo file Word: " + err.message);
+        } finally {
+            btn.innerText = "📄 Xuất File Word Đề Bài & Lời Giải (Chuẩn Equation)";
+            btn.disabled = false;
         }
-
-        const doc = new Document({
-            sections: [{
-                properties: {},
-                children: [
-                    new Paragraph({
-                        text: "BÀI TOÁN ỨNG DỤNG TÍCH PHÂN THỰC TẾ",
-                        heading: HeadingLevel.HEADING_1,
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 200 }
-                    }),
-                    new Paragraph({
-                        text: "ĐỀ BÀI: THIẾT KẾ & TÍNH CHI PHÍ SÂN CHƠI",
-                        heading: HeadingLevel.HEADING_2,
-                        spacing: { after: 120 }
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun(`Một trường học muốn lát gạch cho một sân chơi có khuôn viên hình chữ nhật với chiều rộng `),
-                            new TextRun({ text: `W = ${W} m`, bold: true }),
-                            new TextRun(` và chiều dài `),
-                            new TextRun({ text: `L = ${L} m`, bold: true }),
-                            new TextRun(`. Để tạo cảnh quan thẩm mỹ, hai cạnh chiều rộng được uốn lượn lõm vào trong theo dạng hai đường cong Parabol đối xứng nhau qua tâm sân. Độ võng lớn nhất của mỗi đường parabol vào phía trong là `),
-                            new TextRun({ text: `h = ${h} m`, bold: true }),
-                            new TextRun(`. Biết đơn giá lát gạch hoàn thiện là `),
-                            new TextRun({ text: `${price.toLocaleString('vi-VN')} VNĐ/m²`, bold: true }),
-                            new TextRun(`. Hãy tính diện tích cần lát gạch và tổng chi phí dự toán.`)
-                        ],
-                        spacing: { after: 200 }
-                    }),
-                    new Paragraph({
-                        text: "HƯỚNG DẪN GIẢI CHI TIẾT",
-                        heading: HeadingLevel.HEADING_2,
-                        spacing: { before: 200, after: 120 }
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun({ text: "Bước 1: Chọn hệ trục tọa độ Oxy", bold: true }),
-                        ]
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun(`- Chọn gốc tọa độ O tại tâm hình chữ nhật, trục Ox song song với chiều rộng, trục Oy song song với chiều dài.`),
-                        ]
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun(`- Biên trên là Parabol `),
-                            new DocxMath({
-                                children: [
-                                    new MathRun("y="),
-                                    createFractionComponent(fracA),
-                                    new MathSuperScript({
-                                        children: [new MathRun("x")],
-                                        superScript: [new MathRun("2")]
-                                    }),
-                                    new MathRun(fracB.num >= 0 ? "+" : "-"),
-                                    createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den })
-                                ]
-                            }),
-                            new TextRun(` với `),
-                            new DocxMath({
-                                children: [
-                                    new MathRun(`x∈[-${halfW};${halfW}]`)
-                                ]
-                            }),
-                            new TextRun(`.`)
-                        ],
-                        spacing: { after: 100 }
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun({ text: "Bước 2: Thiết lập tích phân tính diện tích", bold: true }),
-                        ]
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun(`Diện tích hình phẳng sân chơi được tính theo công thức:`),
-                        ]
-                    }),
-                   new Paragraph({
-    alignment: AlignmentType.CENTER,
-    children: [
-        new DocxMath({
-            children: [
-                new MathRun("S=2"),
-                // Tích phân từ 0 đến halfW
-                new MathSubSuperScript({
-                    children: [new MathRun("∫")],
-                    subScript: [new MathRun("0")],
-                    superScript: [new MathRun(`${halfW}`)]
-                }),
-                new MathRun(`[${L/2}-(`),
-                createFractionComponent(fracA),
-                new MathSuperScript({
-                    children: [new MathRun("x")],
-                    superScript: [new MathRun("2")]
-                }),
-                new MathRun(fracB.num >= 0 ? "+" : "-"),
-                createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den }),
-                new MathRun(")]dx")
-            ]
-        })
-    ],
-    spacing: { before: 100, after: 100 }
-}),
-                    new Paragraph({
-                        children: [
-                            new TextRun(`Hoặc áp dụng công thức trừ diện tích Parabol:`),
-                        ]
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [
-                            new DocxMath({
-                                children: [
-                                    new MathRun(`S=(W⋅L)-2⋅`),
-                                    new MathFraction({
-                                        numerator: [new MathRun("2")],
-                                        denominator: [new MathRun("3")]
-                                    }),
-                                    new MathRun(`Wh=${W}⋅${L}-`),
-                                    new MathFraction({
-                                        numerator: [new MathRun("4")],
-                                        denominator: [new MathRun("3")]
-                                    }),
-                                    new MathRun(`⋅${W}⋅${h}≈${(Math.round(area * 100) / 100).toLocaleString('vi-VN')} m²`)
-                                ]
-                            })
-                        ],
-                        spacing: { after: 100 }
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun({ text: "Bước 3: Dự toán kinh phí", bold: true }),
-                        ]
-                    }),
-                    new Paragraph({
-                        children: [
-                            new TextRun(`Tổng chi phí = `),
-                            new TextRun({ text: `${Math.round(cost).toLocaleString('vi-VN')} VNĐ`, bold: true, color: "15803D" }),
-                            new TextRun(` (bằng chữ: `),
-                            new TextRun({ text: `Đã được tính theo đơn giá ${price.toLocaleString('vi-VN')} VNĐ/m²`, italics: true }),
-                            new TextRun(`).`)
-                        ],
-                        spacing: { after: 200 }
-                    })
-                ]
-            }]
-        });
-
-        // Đóng gói và tải file .docx về máy
-        const blob = await Packer.toBlob(doc);
-        saveAs(blob, `De_Toan_San_Choi_W${W}_L${L}_h${h}.docx`);
     }
 
-    // Lắng nghe sự kiện
+    // Lắng nghe sự kiện người dùng tương tác
     document.getElementById('w_input').addEventListener('input', updateAll);
     document.getElementById('l_input').addEventListener('input', updateAll);
     document.getElementById('h_slider').addEventListener('input', updateAll);
