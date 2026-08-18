@@ -363,31 +363,32 @@
                             new TextRun(`Diện tích hình phẳng sân chơi được tính theo công thức:`),
                         ]
                     }),
-                    new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        children: [
-                            new DocxMath({
-                                children: [
-                                    new MathRun("S=2"),
-                                    new MathRun("∫"),
-                                    new MathSuperScript({
-                                        children: [new MathRun("")],
-                                        superScript: [new MathRun(`${halfW}`)]
-                                    }),
-                                    new MathRun(`[(${L}/2)-(`),
-                                    createFractionComponent(fracA),
-                                    new MathSuperScript({
-                                        children: [new MathRun("x")],
-                                        superScript: [new MathRun("2")]
-                                    }),
-                                    new MathRun(fracB.num >= 0 ? "+" : "-"),
-                                    createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den }),
-                                    new MathRun(")]dx")
-                                ]
-                            })
-                        ],
-                        spacing: { before: 100, after: 100 }
-                    }),
+                   new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [
+        new DocxMath({
+            children: [
+                new MathRun("S=2"),
+                // Tích phân từ 0 đến halfW
+                new MathSubSuperScript({
+                    children: [new MathRun("∫")],
+                    subScript: [new MathRun("0")],
+                    superScript: [new MathRun(`${halfW}`)]
+                }),
+                new MathRun(`[${L/2}-(`),
+                createFractionComponent(fracA),
+                new MathSuperScript({
+                    children: [new MathRun("x")],
+                    superScript: [new MathRun("2")]
+                }),
+                new MathRun(fracB.num >= 0 ? "+" : "-"),
+                createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den }),
+                new MathRun(")]dx")
+            ]
+        })
+    ],
+    spacing: { before: 100, after: 100 }
+}),
                     new Paragraph({
                         children: [
                             new TextRun(`Hoặc áp dụng công thức trừ diện tích Parabol:`),
