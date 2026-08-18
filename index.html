@@ -17,7 +17,7 @@
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
-    <!-- docx.js và FileSaver.js xuất file Word chuẩn Equation -->
+    <!-- docx.js và FileSaver.js xuất file Word chuẩn Equation & Image -->
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -237,9 +237,9 @@
         <div>Tổng chi phí dự toán: <span id="total_cost" class="highlight-money">0</span> VNĐ</div>
     </div>
 
-    <!-- NÚT XUẤT FILE WORD -->
+    <!-- NÚT XUẤT FILE WORD KÈM HÌNH ẢNH -->
     <button class="btn-export" id="export_btn" onclick="exportWordDoc()">
-        📄 Xuất File Word Đề Bài & Lời Giải (Chuẩn Equation)
+        📄 Xuất File Word Đề Bài, Hình Vẽ & Lời Giải (Chuẩn Equation)
     </button>
     
     <!-- ĐỒ THỊ PLOTLY -->
@@ -449,15 +449,15 @@
         Plotly.react('plot', [tracePlayground, traceOutline], layout);
     }
 
-    // XUẤT FILE WORD VỚI CÔNG THỨC EQUATION GỐC
+    // XUẤT FILE WORD VỚI CÔNG THỨC EQUATION GỐC VÀ HÌNH VẼ MINH HỌA
     async function exportWordDoc() {
         const btn = document.getElementById('export_btn');
-        btn.innerText = "⏳ Đang tạo file Word...";
+        btn.innerText = "⏳ Đang chụp hình & tạo file Word...";
         btn.disabled = true;
 
         try {
             const { 
-                Document, Packer, Paragraph, TextRun, 
+                Document, Packer, Paragraph, TextRun, ImageRun,
                 Math: DocxMath, MathRun, MathFraction, 
                 MathSuperScript, MathIntegral, 
                 HeadingLevel, AlignmentType 
@@ -465,6 +465,16 @@
 
             const { L, W, price, h, area, cost, fracA, fracB } = globalData;
             const halfL = L / 2;
+
+            // 1. Chụp ảnh đồ thị hiện tại từ Plotly thành Base64
+            const plotDiv = document.getElementById('plot');
+            const imgDataUrl = await Plotly.toImage(plotDiv, {
+                format: 'png',
+                width: 650,
+                height: 360
+            });
+            const base64Data = imgDataUrl.split(',')[1];
+            const imageUint8 = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
             function createFractionComponent(f) {
                 if (f.den === 1) return new MathRun(`${f.num}`);
@@ -497,16 +507,37 @@
                                 new TextRun({ text: `W = ${W} m`, bold: true }),
                                 new TextRun(`. Để tạo cảnh quan thẩm mỹ, hai cạnh chiều dài được uốn lượn lõm vào trong theo dạng hai đường cong Parabol đối xứng nhau qua tâm sân. Độ võng lớn nhất của mỗi đường parabol vào phía trong là `),
                                 new TextRun({ text: `h = ${h} m`, bold: true }),
-                                new TextRun(`. Biết đơn giá lát gạch hoàn thiện là `),
+                                new TextRun(` (như hình vẽ mô phỏng bên dưới). Biết đơn giá lát gạch hoàn thiện là `),
                                 new TextRun({ text: `${price.toLocaleString('vi-VN')} VNĐ/m²`, bold: true }),
                                 new TextRun(`. Hãy tính diện tích cần lát gạch và tổng chi phí dự toán.`)
+                            ],
+                            spacing: { after: 150 }
+                        }),
+                        // CHÈN HÌNH VẼ MINH HỌA VÀO FILE WORD
+                        new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                                new ImageRun({
+                                    data: imageUint8,
+                                    transformation: {
+                                        width: 480,
+                                        height: 265
+                                    }
+                                })
+                            ],
+                            spacing: { after: 80 }
+                        }),
+                        new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [
+                                new TextRun({ text: "Hình mô phỏng: Mô hình toán học của sân chơi trên hệ trục tọa độ Oxy", italics: true, size: 20 })
                             ],
                             spacing: { after: 200 }
                         }),
                         new Paragraph({
                             text: "HƯỚNG DẪN GIẢI CHI TIẾT",
                             heading: HeadingLevel.HEADING_2,
-                            spacing: { before: 200, after: 120 }
+                            spacing: { before: 150, after: 120 }
                         }),
                         new Paragraph({
                             children: [
@@ -630,7 +661,7 @@
             console.error("Lỗi xuất file:", err);
             alert("Có lỗi xảy ra khi tạo file Word: " + err.message);
         } finally {
-            btn.innerText = "📄 Xuất File Word Đề Bài & Lời Giải (Chuẩn Equation)";
+            btn.innerText = "📄 Xuất File Word Đề Bài, Hình Vẽ & Lời Giải (Chuẩn Equation)";
             btn.disabled = false;
         }
     }
