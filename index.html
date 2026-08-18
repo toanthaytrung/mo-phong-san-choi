@@ -2,144 +2,450 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Mô phỏng Toán học Sân chơi</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng & Xuất Đề Toán Sân Chơi</title>
+    
+    <!-- Plotly.js để vẽ đồ thị -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <!-- MathJax để hiển thị công thức LaTeX chuẩn trên Web -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <!-- docx.js và FileSaver.js để xuất file Word có Equation chuẩn -->
+    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 20px; background-color: #f4f7f6; color: #333; }
-        .container { background: white; max-width: 850px; margin: auto; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .control-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; border-bottom: 1px solid #eee; }
-        .control-item { padding: 10px; background: #fafafa; border-radius: 8px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f0f4f8; 
+            color: #2c3e50; 
+        }
+        .container { 
+            background: white; 
+            max-width: 900px; 
+            margin: auto; 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+        }
+        h2 { text-align: center; color: #1e3a8a; margin-top: 0; }
+        .control-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 20px; 
+            padding: 15px; 
+            background: #f8fafc; 
+            border-radius: 12px; 
+            border: 1px solid #e2e8f0; 
+        }
+        .control-item { display: flex; flex-direction: column; gap: 5px; }
+        .control-item label { font-weight: 600; font-size: 0.9em; }
         input[type=range] { width: 100%; cursor: pointer; }
-        input[type=number] { width: 90%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-size: 1em; text-align: center; }
-        .result-box { background: #fff8f0; padding: 15px; border-radius: 10px; border-left: 5px solid #A0522D; margin: 20px 0; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; }
-        .equation-box { background: #e3f2fd; padding: 15px; border-radius: 10px; border-left: 5px solid #2196f3; margin: 10px 0; font-family: 'Courier New', Courier, monospace; font-weight: bold; }
-        .highlight-area { color: #A0522D; font-size: 1.2em; font-weight: bold; }
-        .highlight-money { color: #2e7d32; font-size: 1.3em; font-weight: bold; }
-        #plot { width: 100%; height: 550px; }
+        input[type=number] { 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            border: 1px solid #cbd5e1; 
+            font-size: 1em; 
+            text-align: center; 
+        }
+        .equation-box { 
+            background: #eff6ff; 
+            padding: 15px; 
+            border-radius: 10px; 
+            border-left: 5px solid #3b82f6; 
+            margin: 15px 0; 
+            font-size: 1.15em; 
+            text-align: center; 
+            min-height: 40px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .result-box { 
+            background: #fefce8; 
+            padding: 15px 20px; 
+            border-radius: 10px; 
+            border-left: 5px solid #eab308; 
+            margin: 15px 0; 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: space-around; 
+            align-items: center; 
+            font-size: 1.05em; 
+        }
+        .highlight-area { color: #b45309; font-weight: bold; font-size: 1.2em; }
+        .highlight-money { color: #15803d; font-weight: bold; font-size: 1.25em; }
+        .btn-export { 
+            display: block; 
+            width: 100%; 
+            padding: 14px; 
+            background-color: #2563eb; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 1.1em; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.2s ease; 
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); 
+            margin: 20px 0; 
+        }
+        .btn-export:hover { background-color: #1d4ed8; }
+        .btn-export:active { transform: scale(0.99); }
+        #plot { width: 100%; height: 500px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Thiết kế & Dự toán Chi phí Sân chơi</h2>
-        
-        <div class="control-group">
-            <div class="control-item">
-                <label><b>Chiều rộng (W):</b> (m)</label>
-                <input type="number" id="w_input" value="60" min="10" max="200">
-            </div>
-            <div class="control-item">
-                <label><b>Chiều dài (L):</b> (m)</label>
-                <input type="number" id="l_input" value="80" min="10" max="200">
-            </div>
-            <div class="control-item">
-                <label><b>Giá gạch:</b> (VNĐ/m²)</label>
-                <input type="number" id="price_input" value="35000" step="1000">
-            </div>
-            <div class="control-item" style="grid-column: span 2;">
-                <label><b>Độ võng Parabol (h): </b><span id="h_val">20</span> m</label>
-                <input type="range" id="h_slider" min="0" max="40" step="0.1" value="20">
-            </div>
-        </div>
 
-        <div class="equation-box">
-            Phương trình Parabol biên trên: <span id="eq_text" style="color: #d32f2f;">y = ax² + b</span>
+<div class="container">
+    <h2>Mô Phỏng & Thiết Kế Toán Học Sân Chơi</h2>
+    
+    <div class="control-grid">
+        <div class="control-item">
+            <label>Chiều rộng sân $W$ (m):</label>
+            <input type="number" id="w_input" value="60" min="10" max="200" step="2">
         </div>
-        
-        <div class="result-box">
-            <div>Diện tích sân: <span id="area_val" class="highlight-area">0</span> m²</div>
-            <div>Tổng chi phí: <span id="total_cost" class="highlight-money">0</span> VNĐ</div>
+        <div class="control-item">
+            <label>Chiều dài sân $L$ (m):</label>
+            <input type="number" id="l_input" value="80" min="10" max="200" step="2">
         </div>
-        
-        <div id="plot"></div>
+        <div class="control-item">
+            <label>Đơn giá gạch (VNĐ/m²):</label>
+            <input type="number" id="price_input" value="35000" step="1000">
+        </div>
+        <div class="control-item" style="grid-column: 1 / -1;">
+            <label>Độ võng Parabol $h$: <b id="h_val" style="color:#2563eb;">20</b> m</label>
+            <input type="range" id="h_slider" min="0" max="40" step="0.5" value="20">
+        </div>
     </div>
 
-    <script>
-        function formatCurrency(num) {
-            return num.toLocaleString('vi-VN');
+    <div class="equation-box" id="eq_container">
+        Đang tải phương trình...
+    </div>
+    
+    <div class="result-box">
+        <div>Diện tích lát gạch: <span id="area_val" class="highlight-area">0</span> m²</div>
+        <div>Tổng chi phí dự toán: <span id="total_cost" class="highlight-money">0</span> VNĐ</div>
+    </div>
+
+    <button class="btn-export" onclick="exportWordDoc()">
+        📄 Xuất File Word Đề Bài & Lời Giải (Chuẩn Equation)
+    </button>
+    
+    <div id="plot"></div>
+</div>
+
+<script>
+    // Hàm tìm ước chung lớn nhất (GCD)
+    function gcd(a, b) {
+        a = Math.abs(a);
+        b = Math.abs(b);
+        while (b) {
+            let t = b;
+            b = a % b;
+            a = t;
         }
+        return a;
+    }
 
-        function updateAll() {
-            // Lấy giá trị đầu vào
-            const W = parseFloat(document.getElementById('w_input').value) || 0;
-            const L = parseFloat(document.getElementById('l_input').value) || 0;
-            const price = parseFloat(document.getElementById('price_input').value) || 0;
-            
-            // Giới hạn h không vượt quá nửa chiều dài L
-            const maxH = L / 2;
-            const slider = document.getElementById('h_slider');
-            slider.max = maxH;
-            let h = parseFloat(slider.value);
-            if (h > maxH) h = maxH;
-            
-            document.getElementById('h_val').innerText = h;
-            
-            // 1. Tính diện tích
-            // S = (W * L) - 2 * (2/3 * W * h)
-            const area = (W * L) - ( (4/3) * W * h );
-            document.getElementById('area_val').innerText = Math.round(area);
+    // Hàm chuyển số thực hoặc phân số về dạng phân số tối giản {num, den}
+    function toFraction(val) {
+        if (Number.isInteger(val)) return { num: val, den: 1 };
+        const precision = 10000;
+        let num = Math.round(val * precision);
+        let den = precision;
+        let g = gcd(num, den);
+        return { num: num / g, den: den / g };
+    }
 
-            // 2. Tính chi phí
-            const cost = area * price;
-            document.getElementById('total_cost').innerText = formatCurrency(Math.round(cost));
+    // Chuyển phân số sang chuỗi LaTeX
+    function formatFractionLatex(f) {
+        if (f.den === 1) return `${f.num}`;
+        if (f.num === 0) return `0`;
+        const sign = (f.num * f.den < 0) ? "-" : "";
+        return `${sign}\\frac{${Math.abs(f.num)}}{${Math.abs(f.den)}}`;
+    }
 
-            // 3. Tính hệ số phương trình Parabol: y = ax^2 + b
-            // Tại x = W/2, y = L/2. Tại x = 0, y = L/2 - h
-            // b = L/2 - h
-            // a = h / (W/2)^2 = 4h / W^2
-            const a = h / Math.pow(W/2, 2);
-            const b = (L/2) - h;
-            const a_fixed = a.toFixed(5);
-            const b_fixed = b.toFixed(2);
-            document.getElementById('eq_text').innerText = `y = ${a_fixed}x² + ${b_fixed}`;
+    let globalData = {};
 
-            // 4. Vẽ đồ thị
-            let x_vals = [], y_top = [], y_bottom = [];
-            const step = W / 100; 
-            for (let x = -W/2; x <= W/2; x += step) {
-                x_vals.push(x);
-                let y_p = a * (x * x) + b;
-                y_top.push(y_p);
-                y_bottom.push(-y_p);
-            }
-
-            const tracePlayground = {
-                x: x_vals.concat(x_vals.slice().reverse()),
-                y: y_top.concat(y_bottom.slice().reverse()),
-                fill: 'toself',
-                fillcolor: '#D2B48C',
-                line: { color: '#8B4513', width: 2 },
-                name: 'Diện tích lát gạch',
-                type: 'scatter',
-                hoverinfo: 'x+y'
-            };
-
-            const traceOutline = {
-                x: [-W/2, W/2, W/2, -W/2, -W/2],
-                y: [L/2, L/2, -L/2, -L/2, L/2],
-                mode: 'lines',
-                line: { color: '#333', width: 2, dash: 'dash' },
-                name: 'Khuôn viên gốc',
-                type: 'scatter'
-            };
-
-            const layout = {
-                xaxis: { range: [-W/2 - 10, W/2 + 10], title: 'Chiều rộng (x)', fixedrange: true },
-                yaxis: { range: [-L/2 - 10, L/2 + 10], title: 'Chiều dài (y)', fixedrange: true },
-                showlegend: false,
-                margin: { l: 50, r: 50, t: 20, b: 50 },
-                aspectratio: {x: 1, y: 1}
-            };
-
-            Plotly.react('plot', [tracePlayground, traceOutline], layout);
-        }
-
-        // Lắng nghe tất cả sự kiện
-        document.getElementById('w_input').addEventListener('input', updateAll);
-        document.getElementById('l_input').addEventListener('input', updateAll);
-        document.getElementById('h_slider').addEventListener('input', updateAll);
-        document.getElementById('price_input').addEventListener('input', updateAll);
+    function updateAll() {
+        const W = parseFloat(document.getElementById('w_input').value) || 0;
+        const L = parseFloat(document.getElementById('l_input').value) || 0;
+        const price = parseFloat(document.getElementById('price_input').value) || 0;
         
-        window.onload = updateAll;
-    </script>
+        const maxH = L / 2;
+        const slider = document.getElementById('h_slider');
+        slider.max = maxH;
+        let h = parseFloat(slider.value);
+        if (h > maxH) { h = maxH; slider.value = h; }
+        
+        document.getElementById('h_val').innerText = h;
+        
+        // 1. Tính toán diện tích & chi phí
+        const area = (W * L) - ((4/3) * W * h);
+        const cost = area * price;
+        
+        document.getElementById('area_val').innerText = (Math.round(area * 100) / 100).toLocaleString('vi-VN');
+        document.getElementById('total_cost').innerText = Math.round(cost).toLocaleString('vi-VN');
+        
+        // 2. Rút gọn hệ số a và b
+        // a = 4h / W^2 = h / (W/2)^2
+        const numA = Math.round(4 * h * 100);
+        const denA = Math.round(W * W * 100);
+        const gA = gcd(numA, denA);
+        const fracA = { num: numA / gA, den: denA / gA };
+
+        // b = L/2 - h = (L - 2h) / 2
+        const numB = Math.round((L - 2 * h) * 10);
+        const denB = 20;
+        const gB = gcd(numB, denB);
+        const fracB = { num: numB / gB, den: denB / gB };
+
+        globalData = { W, L, price, h, area, cost, fracA, fracB };
+
+        // 3. Render công thức bằng MathJax
+        const latexA = formatFractionLatex(fracA);
+        const latexB = (fracB.num >= 0 ? "+ " : "- ") + formatFractionLatex({ num: Math.abs(fracB.num), den: fracB.den });
+        const aPart = (fracA.num === 1 && fracA.den === 1) ? "x^2" : `${latexA}x^2`;
+        const eqLatex = `y = ${aPart} ${latexB}`;
+        
+        const eqContainer = document.getElementById('eq_container');
+        eqContainer.innerHTML = `Phương trình Parabol biên trên: &nbsp; $\\displaystyle ${eqLatex}$`;
+        if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise([eqContainer]);
+        }
+
+        // 4. Vẽ đồ thị Plotly
+        const a_val = (4 * h) / (W * W);
+        const b_val = (L / 2) - h;
+
+        let x_vals = [], y_top = [], y_bottom = [];
+        const step = W / 100; 
+        for (let x = -W/2; x <= W/2; x += step) {
+            x_vals.push(x);
+            let y_p = a_val * (x * x) + b_val;
+            y_top.push(y_p);
+            y_bottom.push(-y_p);
+        }
+
+        const tracePlayground = {
+            x: x_vals.concat(x_vals.slice().reverse()),
+            y: y_top.concat(y_bottom.slice().reverse()),
+            fill: 'toself',
+            fillcolor: '#fed7aa',
+            line: { color: '#c2410c', width: 2.5 },
+            name: 'Diện tích lát gạch',
+            type: 'scatter',
+            hoverinfo: 'x+y'
+        };
+
+        const traceOutline = {
+            x: [-W/2, W/2, W/2, -W/2, -W/2],
+            y: [L/2, L/2, -L/2, -L/2, L/2],
+            mode: 'lines',
+            line: { color: '#475569', width: 1.5, dash: 'dash' },
+            name: 'Khuôn viên đất',
+            type: 'scatter'
+        };
+
+        const layout = {
+            xaxis: { range: [-W/2 - 5, W/2 + 5], title: 'Trục hoành x (m)', fixedrange: true },
+            yaxis: { range: [-L/2 - 5, L/2 + 5], title: 'Trục tung y (m)', fixedrange: true },
+            showlegend: false,
+            margin: { l: 50, r: 50, t: 30, b: 50 }
+        };
+
+        Plotly.react('plot', [tracePlayground, traceOutline], layout);
+    }
+
+    // XUẤT FILE WORD VỚI CÔNG THỨC EQUATION GỐC
+    async function exportWordDoc() {
+        const { Document, Packer, Paragraph, TextRun, Math: DocxMath, MathRun, MathFraction, MathSuperScript, HeadingLevel, AlignmentType } = docx;
+
+        const { W, L, price, h, area, cost, fracA, fracB } = globalData;
+        const halfW = W / 2;
+
+        // Xây dựng thành phần công thức Equation cho docx
+        function createFractionComponent(f) {
+            if (f.den === 1) return new MathRun(`${f.num}`);
+            return new MathFraction({
+                numerator: [new MathRun(`${f.num}`)],
+                denominator: [new MathRun(`${f.den}`)]
+            });
+        }
+
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new Paragraph({
+                        text: "BÀI TOÁN ỨNG DỤNG TÍCH PHÂN THỰC TẾ",
+                        heading: HeadingLevel.HEADING_1,
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 200 }
+                    }),
+                    new Paragraph({
+                        text: "ĐỀ BÀI: THIẾT KẾ & TÍNH CHI PHÍ SÂN CHƠI",
+                        heading: HeadingLevel.HEADING_2,
+                        spacing: { after: 120 }
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun(`Một trường học muốn lát gạch cho một sân chơi có khuôn viên hình chữ nhật với chiều rộng `),
+                            new TextRun({ text: `W = ${W} m`, bold: true }),
+                            new TextRun(` và chiều dài `),
+                            new TextRun({ text: `L = ${L} m`, bold: true }),
+                            new TextRun(`. Để tạo cảnh quan thẩm mỹ, hai cạnh chiều rộng được uốn lượn lõm vào trong theo dạng hai đường cong Parabol đối xứng nhau qua tâm sân. Độ võng lớn nhất của mỗi đường parabol vào phía trong là `),
+                            new TextRun({ text: `h = ${h} m`, bold: true }),
+                            new TextRun(`. Biết đơn giá lát gạch hoàn thiện là `),
+                            new TextRun({ text: `${price.toLocaleString('vi-VN')} VNĐ/m²`, bold: true }),
+                            new TextRun(`. Hãy tính diện tích cần lát gạch và tổng chi phí dự toán.`)
+                        ],
+                        spacing: { after: 200 }
+                    }),
+                    new Paragraph({
+                        text: "HƯỚNG DẪN GIẢI CHI TIẾT",
+                        heading: HeadingLevel.HEADING_2,
+                        spacing: { before: 200, after: 120 }
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Bước 1: Chọn hệ trục tọa độ Oxy", bold: true }),
+                        ]
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun(`- Chọn gốc tọa độ O tại tâm hình chữ nhật, trục Ox song song với chiều rộng, trục Oy song song với chiều dài.`),
+                        ]
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun(`- Biên trên là Parabol `),
+                            new DocxMath({
+                                children: [
+                                    new MathRun("y="),
+                                    createFractionComponent(fracA),
+                                    new MathSuperScript({
+                                        children: [new MathRun("x")],
+                                        superScript: [new MathRun("2")]
+                                    }),
+                                    new MathRun(fracB.num >= 0 ? "+" : "-"),
+                                    createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den })
+                                ]
+                            }),
+                            new TextRun(` với `),
+                            new DocxMath({
+                                children: [
+                                    new MathRun(`x∈[-${halfW};${halfW}]`)
+                                ]
+                            }),
+                            new TextRun(`.`)
+                        ],
+                        spacing: { after: 100 }
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Bước 2: Thiết lập tích phân tính diện tích", bold: true }),
+                        ]
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun(`Diện tích hình phẳng sân chơi được tính theo công thức:`),
+                        ]
+                    }),
+                    new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                            new DocxMath({
+                                children: [
+                                    new MathRun("S=2"),
+                                    new MathRun("∫"),
+                                    new MathSuperScript({
+                                        children: [new MathRun("")],
+                                        superScript: [new MathRun(`${halfW}`)]
+                                    }),
+                                    new MathRun(`[(${L}/2)-(`),
+                                    createFractionComponent(fracA),
+                                    new MathSuperScript({
+                                        children: [new MathRun("x")],
+                                        superScript: [new MathRun("2")]
+                                    }),
+                                    new MathRun(fracB.num >= 0 ? "+" : "-"),
+                                    createFractionComponent({ num: Math.abs(fracB.num), den: fracB.den }),
+                                    new MathRun(")]dx")
+                                ]
+                            })
+                        ],
+                        spacing: { before: 100, after: 100 }
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun(`Hoặc áp dụng công thức trừ diện tích Parabol:`),
+                        ]
+                    }),
+                    new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                            new DocxMath({
+                                children: [
+                                    new MathRun(`S=(W⋅L)-2⋅`),
+                                    new MathFraction({
+                                        numerator: [new MathRun("2")],
+                                        denominator: [new MathRun("3")]
+                                    }),
+                                    new MathRun(`Wh=${W}⋅${L}-`),
+                                    new MathFraction({
+                                        numerator: [new MathRun("4")],
+                                        denominator: [new MathRun("3")]
+                                    }),
+                                    new MathRun(`⋅${W}⋅${h}≈${(Math.round(area * 100) / 100).toLocaleString('vi-VN')} m²`)
+                                ]
+                            })
+                        ],
+                        spacing: { after: 100 }
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun({ text: "Bước 3: Dự toán kinh phí", bold: true }),
+                        ]
+                    }),
+                    new Paragraph({
+                        children: [
+                            new TextRun(`Tổng chi phí = `),
+                            new TextRun({ text: `${Math.round(cost).toLocaleString('vi-VN')} VNĐ`, bold: true, color: "15803D" }),
+                            new TextRun(` (bằng chữ: `),
+                            new TextRun({ text: `Đã được tính theo đơn giá ${price.toLocaleString('vi-VN')} VNĐ/m²`, italics: true }),
+                            new TextRun(`).`)
+                        ],
+                        spacing: { after: 200 }
+                    })
+                ]
+            }]
+        });
+
+        // Đóng gói và tải file .docx về máy
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `De_Toan_San_Choi_W${W}_L${L}_h${h}.docx`);
+    }
+
+    // Lắng nghe sự kiện
+    document.getElementById('w_input').addEventListener('input', updateAll);
+    document.getElementById('l_input').addEventListener('input', updateAll);
+    document.getElementById('h_slider').addEventListener('input', updateAll);
+    document.getElementById('price_input').addEventListener('input', updateAll);
+    
+    window.onload = updateAll;
+</script>
+
 </body>
 </html>
